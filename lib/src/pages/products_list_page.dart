@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:productsfrontend/Models/Products.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:productsfrontend/Utils/http_connection.dart';
 import 'package:productsfrontend/src/pages/edit_product_page.dart';
+import 'package:productsfrontend/src/widgets/custom_button.dart';
 import 'package:productsfrontend/src/widgets/custom_header.dart';
 import 'package:productsfrontend/src/widgets/custom_productscontainer.dart';
 import 'package:provider/provider.dart';
@@ -13,45 +14,63 @@ class ProductsListPage extends StatefulWidget {
 
 class _ProductsListPageState extends State<ProductsListPage> {
   TextEditingController controller = new TextEditingController();
-  
-  void updateData(){
-    print("Data Updated");
-    setState(() {});
-  }
-
+  @override
+  void initState() => SchedulerBinding.instance.addPostFrameCallback((_) => Provider.of<HttpOperations>(context).getProducts());
   @override
   Widget build(BuildContext context) {
     final _httpOperations = Provider.of<HttpOperations>(context);
-    _httpOperations.updateChanges = updateData;
 
     final widthSize = MediaQuery.of(context).size.width;
     final heightSize = MediaQuery.of(context).size.height;
-
-
-    void _editProduct(Products product){
-      controller.clear();
-      Navigator.of(context).push(MaterialPageRoute(builder: (BuildContext context) => EditProductPage(product: product, titlePage: "Editar Producto")));
-    }
 
     void _createProduct(){
       controller.clear();
       Navigator.of(context).push(MaterialPageRoute(builder: (BuildContext context) => EditProductPage(product: null, titlePage: "Crear Producto")));
     }
 
-    void _searchProduct(String name) => setState( () => _httpOperations.searchProduct(name)); 
+    Widget dataToShow() {
+      return _httpOperations.productsToShow == null ? Column(
+        children: [
+          Icon(Icons.wifi, color: Colors.red[200], size: 50,),
+          Text("ERROR AL CONECTARSE.", style: new TextStyle(fontSize: 25, fontWeight: FontWeight.w900), textAlign: TextAlign.center,)
+        ],
+      )
+      : _httpOperations.productsToShow.length == 0 ? Column(
+        children: [
+          Icon(Icons.error_outline_outlined, color: Colors.red[200], size: 50,),
+          Text("NO HAY DATOS EN LA BD.", style: new TextStyle(fontSize: 25, fontWeight: FontWeight.w900), textAlign: TextAlign.center,)
+        ],
+      )
+      : ListView.builder(
+          shrinkWrap: true,
+          itemCount: _httpOperations.productsToShow.length,
+          itemBuilder: (context, index) => CustomProductsContainer(
+            product: _httpOperations.productsToShow[index],
+            canEdit: true,
+          ),
+        );
+    }
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(onPressed: () => _createProduct(), foregroundColor: Colors.black,),
+      floatingActionButton: CustomButton(
+        function: _createProduct,
+        heightSize: heightSize,
+        widhtSize: widthSize,
+        text: "Agregar",
+        icon: Icons.add,
+        color: Colors.green,
+      ),
       resizeToAvoidBottomInset: false,
       body: SingleChildScrollView(
         physics: BouncingScrollPhysics(),
         scrollDirection: Axis.vertical,
         child: Padding(
           padding: EdgeInsets.only(
-              top: heightSize * 0.1,
-              left: widthSize * 0.1,
-              right: widthSize * 0.1,
-              bottom: heightSize * 0.1),
+            top: heightSize * 0.1,
+            left: widthSize * 0.1,
+            right: widthSize * 0.1,
+            bottom: heightSize * 0.1
+          ),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
@@ -62,53 +81,28 @@ class _ProductsListPageState extends State<ProductsListPage> {
                 ),
                 SizedBox(height: heightSize * 0.025,),
                 TextField(
+                  autofocus: false,
                   decoration: InputDecoration(labelText: "Producto", hintText: "Producto a buscar..."),
-                  onChanged: (value) => _searchProduct(value),
+                  onChanged: (value) => setState( () => _httpOperations.searchProduct(value)),
                   controller: controller,
+                  onEditingComplete: () => FocusScope.of(context).unfocus(),
                 ),
-                FutureBuilder<List<Products>>(
-                  future: _httpOperations.getProducts(),
-                  builder: (_, AsyncSnapshot<List<Products>> data){
-                    switch(data.connectionState){
-                      case ConnectionState.none:
-                        print("Connection Error");
-                        break;
-                      case ConnectionState.waiting:
-                        return CircularProgressIndicator();
-                        break;
-                      case ConnectionState.active:
-                        break;
-                      case ConnectionState.done:
-                        if(data.hasData){
-                          if(data.data.isEmpty) return Column(
-                            children: [
-                              Icon(Icons.error_outline_outlined, color: Colors.red[200], size: 50,),
-                              Text("NO HAY DATOS EN LA BD.", style: new TextStyle(fontSize: 25, fontWeight: FontWeight.w900), textAlign: TextAlign.center,)
-                            ],
-                          );
-                          else return ListView.builder(
-                            shrinkWrap: true,
-                            scrollDirection: Axis.vertical,
-                            itemCount: data.data.length,
-                            itemBuilder: (context, index) => CustomProductsContainer(product: data.data[index], onSelect: _editProduct,),
-                          );
-                        }
-                        else if(data.data == null) return Column(
-                          children: [
-                            Icon(Icons.error_outline_outlined, color: Colors.red[200], size: 50,),
-                            Text("ERROR AL CONECTARSE.", style: new TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
-                          ],
-                        );
-                        break;
-                    }
-                    return Column(
-                      children: [
-                        Icon(Icons.error_outline_outlined, color: Colors.red[200], size: 50,),
-                        Text("ERROR, NO HAY DATOS.", style: new TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
-                      ],
-                    );
+                CustomButton(
+                  heightSize: heightSize,
+                  widhtSize: widthSize,
+                  text: "Actualizar",
+                  icon: Icons.update,
+                  color: Colors.blue,
+                  function: () async{
+                    FocusScope.of(context).unfocus();
+                    controller.clear();
+                    await _httpOperations.getProducts();
                   }
                 ),
+                SizedBox(height: heightSize * 0.005,),
+                Text("Ultima actualización:", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900)),
+                Text("${_httpOperations.lastUpdate}", textAlign: TextAlign.center,),
+                dataToShow(),
               ],
             ),
           ),

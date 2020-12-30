@@ -9,11 +9,11 @@ class CustomButton extends StatelessWidget {
   String text;
   IconData icon;
   Function function;
-  CustomButton({this.heightSize, this.widhtSize, this.color, this.text, this.icon, this.function});
+  CustomButton({this.heightSize, this.widhtSize, this.color, this.text, this.icon, @required this.function});
   @override
   Widget build(BuildContext context) => GestureDetector(
     child: Padding(
-      padding: EdgeInsets.all(15.0),
+      padding: EdgeInsets.only(top: 15.0),
       child: Container(
         height: heightSize * 0.1,
         width: widhtSize * 0.3,

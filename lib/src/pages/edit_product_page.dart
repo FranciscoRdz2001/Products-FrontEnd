@@ -14,7 +14,7 @@ class EditProductPage extends StatefulWidget {
   Products product;
   String titlePage;
   bool _productExist;
-  EditProductPage({this.product, this.titlePage}){
+  EditProductPage({this.product, this.titlePage,}){
     if(this.product == null){
       _productExist = false;
       this.product = new Products(code: "", name: "", category: "", description: "", quantity: 0, pieces: 0, price: 0);
@@ -58,7 +58,7 @@ class _EditProductPageState extends State<EditProductPage> {
                   widhtSize: widthSize,
                 ),
                 SizedBox(height: heightSize * 0.05),
-                CustomProductsContainer(product: widget.product, onSelect: null),
+                CustomProductsContainer(product: widget.product),
                 SizedBox(height: heightSize * 0.05),
                 TextField(
                   decoration: InputDecoration(labelText: "Nombre", hintText: "Ingresa el nombre..."),
